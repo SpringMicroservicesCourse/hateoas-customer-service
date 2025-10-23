@@ -4,10 +4,9 @@ import tw.fengqing.spring.springbucks.customer.support.CustomConnectionKeepAlive
 import lombok.extern.slf4j.Slf4j;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.apache.hc.client5.http.impl.classic.HttpClients;
-import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManager;
+import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManagerBuilder;
 import org.apache.hc.core5.util.TimeValue;
-import org.apache.hc.core5.util.Timeout;
-import org.apache.hc.client5.http.config.RequestConfig;
+import org.apache.hc.client5.http.config.ConnectionConfig;
 import org.springframework.boot.Banner;
 import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -32,32 +31,29 @@ public class CustomerServiceApplication {
 	}
 
 	@Bean
-	public HttpComponentsClientHttpRequestFactory requestFactory() {
-		PoolingHttpClientConnectionManager connectionManager = new PoolingHttpClientConnectionManager();
-		connectionManager.setMaxTotal(200); // 設定連線池最大連線數
-		connectionManager.setDefaultMaxPerRoute(20); // 單一路由最大連線數
-
-		// 設定 timeout
-		RequestConfig config = RequestConfig.custom()
-				.setConnectTimeout(Timeout.ofMilliseconds(100))
-				.setResponseTimeout(Timeout.ofMilliseconds(500))
+	public CloseableHttpClient httpClient() {
+		// 整合連線池管理器和 HttpClient 配置
+		return HttpClients.custom()
+				.setConnectionManager(PoolingHttpClientConnectionManagerBuilder.create()
+						.setMaxConnTotal(200) // 最大連線數
+						.setMaxConnPerRoute(20) // 每個路由最大連線數
+						.setDefaultConnectionConfig(ConnectionConfig.custom()
+								.setTimeToLive(TimeValue.ofSeconds(30)) // 連線存活時間
+								.build())
+						.build())
+				.evictIdleConnections(TimeValue.ofSeconds(30)) // 空閒連線清理
+				.disableAutomaticRetries() // 停用自動重試
+				.setKeepAliveStrategy(new CustomConnectionKeepAliveStrategy()) // 自定義 Keep-Alive 策略
 				.build();
-
-		CloseableHttpClient httpClient = HttpClients.custom()
-				.setConnectionManager(connectionManager)
-				.setDefaultRequestConfig(config)
-				.evictIdleConnections(TimeValue.ofSeconds(30)) // 30秒閒置自動關閉
-				.disableAutomaticRetries()
-				.setKeepAliveStrategy(new CustomConnectionKeepAliveStrategy())
-				.build();
-
-		return new HttpComponentsClientHttpRequestFactory(httpClient);
 	}
 
 	@Bean
 	public RestTemplate restTemplate(RestTemplateBuilder builder) {
+		HttpComponentsClientHttpRequestFactory requestFactory = new HttpComponentsClientHttpRequestFactory(httpClient());
+		requestFactory.setConnectTimeout(Duration.ofSeconds(5));
+		requestFactory.setReadTimeout(Duration.ofSeconds(1));
 		return builder
-				.requestFactory(this::requestFactory)
+				.requestFactory(() -> requestFactory)
 				.build();
 	}
 }

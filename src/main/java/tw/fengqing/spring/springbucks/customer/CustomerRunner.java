@@ -10,24 +10,24 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.hateoas.Link;
-import org.springframework.hateoas.PagedModel;
-import org.springframework.hateoas.EntityModel;
-import org.springframework.hateoas.CollectionModel;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.RequestEntity;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
+import org.springframework.hateoas.Link;
+import org.springframework.hateoas.EntityModel;
+import org.springframework.hateoas.PagedModel;
+import org.springframework.http.MediaType;
+
 import java.net.URI;
-import java.util.Collections;
 import java.util.Map;
 
 @Component
 @Slf4j
 public class CustomerRunner implements ApplicationRunner {
-    private static final URI ROOT_URI = URI.create("http://localhost:8080/api");
+    private static final URI ROOT_URI = URI.create("http://localhost:8080/");
     @Autowired
     private RestTemplate restTemplate;
 
@@ -35,19 +35,21 @@ public class CustomerRunner implements ApplicationRunner {
     public void run(ApplicationArguments args) throws Exception {
         Link coffeeLink = getLink(ROOT_URI,"coffees");
         readCoffeeMenu(coffeeLink);
-        EntityModel<Coffee> americano = addCoffee(coffeeLink);
+        String coffeeUri = addCoffee(coffeeLink);
 
         Link orderLink = getLink(ROOT_URI, "coffeeOrders");
-        addOrder(orderLink, americano);
+        addOrder(orderLink, coffeeUri);
         queryOrders(orderLink);
     }
 
     private Link getLink(URI uri, String rel) {
         ResponseEntity<Map> rootResp =
                 restTemplate.exchange(uri, HttpMethod.GET, null, Map.class);
+        
         Map<String, Object> links = (Map<String, Object>) rootResp.getBody().get("_links");
         Map<String, Object> linkData = (Map<String, Object>) links.get(rel);
         String href = (String) linkData.get("href");
+        
         Link link = Link.of(href, rel);
         log.info("Link: {}", link);
         return link;
@@ -61,51 +63,7 @@ public class CustomerRunner implements ApplicationRunner {
         log.info("Menu Response: {}", coffeeResp.getBody());
     }
 
-    private void addOrder(Link link, EntityModel<Coffee> coffee) {
-        log.info("進入 addOrder 方法");
-        CoffeeOrder newOrder = CoffeeOrder.builder()
-                .customer("Li Lei")
-                .state(OrderState.INIT)
-                .build();
-        RequestEntity<?> req =
-                RequestEntity.post(link.getTemplate().expand()).body(newOrder);
-        ResponseEntity<Map> resp =
-                restTemplate.exchange(req, Map.class);
-        log.info("add Order Response: {}", resp);
-
-        Map<String, Object> orderData = resp.getBody();
-        log.info("orderData: {}", orderData);
-        if (orderData == null) {
-            log.error("orderData is null");
-            return;
-        }
-        Map<String, Object> links = (Map<String, Object>) orderData.get("_links");
-        log.info("links: {}", links);
-        if (links == null) {
-            log.error("_links is null");
-            return;
-        }
-        Map<String, Object> itemsLinkData = (Map<String, Object>) links.get("items");
-        log.info("itemsLinkData: {}", itemsLinkData);
-        if (itemsLinkData == null) {
-            log.error("itemsLinkData is null");
-            return;
-        }
-        String itemsHref = (String) itemsLinkData.get("href");
-        Link items = Link.of(itemsHref, "items");
-
-        String coffeeUri = lastCreatedCoffeeUri;
-        req = RequestEntity.post(items.getTemplate().expand())
-                .contentType(org.springframework.http.MediaType.parseMediaType("text/uri-list"))
-                .body(coffeeUri);
-        ResponseEntity<String> itemResp = restTemplate.exchange(req, String.class);
-        log.info("add Order Items Response: {}", itemResp);
-    }
-
-    // 新增一個欄位來保存上一次新增咖啡的 URI
-    private String lastCreatedCoffeeUri;
-
-    private EntityModel<Coffee> addCoffee(Link link) {
+    private String addCoffee(Link link) {
         Coffee americano = Coffee.builder()
                 .name("americano")
                 .price(Money.of(CurrencyUnit.of("TWD"), 125.0))
@@ -116,9 +74,41 @@ public class CustomerRunner implements ApplicationRunner {
                 restTemplate.exchange(req,
                         new ParameterizedTypeReference<EntityModel<Coffee>>() {});
         log.info("add Coffee Response: {}", resp);
-        // 保存新建咖啡的 URI
-        lastCreatedCoffeeUri = resp.getHeaders().getLocation().toString();
-        return resp.getBody();
+        
+        // 從 Location 標頭取得咖啡的 URI，不依賴固定 ID
+        String coffeeUri = resp.getHeaders().getLocation().toString();
+        log.info("Coffee URI from Location header: {}", coffeeUri);
+        return coffeeUri;
+    }
+
+    private void addOrder(Link link, String coffeeUri) {
+        CoffeeOrder newOrder = CoffeeOrder.builder()
+                .customer("Ray Chu")
+                .state(OrderState.INIT)
+                .build();
+        RequestEntity<?> req =
+                RequestEntity.post(link.getTemplate().expand()).body(newOrder);
+        ResponseEntity<Map> resp =
+                restTemplate.exchange(req, Map.class);
+        log.info("add Order Response: {}", resp);
+
+        // 直接解析 JSON 回應中的 _links
+        Map<String, Object> orderData = resp.getBody();
+        Map<String, Object> links = (Map<String, Object>) orderData.get("_links");
+        if (links != null && links.containsKey("items")) {
+            Map<String, Object> itemsLinkData = (Map<String, Object>) links.get("items");
+            String itemsHref = (String) itemsLinkData.get("href");
+            Link items = Link.of(itemsHref, "items");
+            
+            // 使用從 Location 標頭取得的咖啡 URI
+            req = RequestEntity.post(items.getTemplate().expand())
+                    .contentType(MediaType.parseMediaType("text/uri-list"))
+                    .body(coffeeUri);
+            ResponseEntity<String> itemResp = restTemplate.exchange(req, String.class);
+            log.info("add Order Items Response: {}", itemResp);
+        } else {
+            log.warn("No 'items' link found in order response");
+        }
     }
 
     private void queryOrders(Link link) {

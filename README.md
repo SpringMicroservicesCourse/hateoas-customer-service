@@ -94,7 +94,7 @@ mvn spring-boot:run
 1. **探索 API 根端點** - 從 `http://localhost:8080/api` 取得可用資源連結
 2. **查詢咖啡菜單** - 透過 `coffees` 連結取得所有咖啡資訊
 3. **新增咖啡** - 建立一杯美式咖啡 (TWD 125)
-4. **建立訂單** - 為客戶 "Li Lei" 建立新訂單
+4. **建立訂單** - 為客戶 "Ray Chu" 建立新訂單
 5. **關聯咖啡到訂單** - 將新增的咖啡加入訂單項目
 6. **查詢所有訂單** - 顯示完整的訂單清單
 
@@ -135,7 +135,7 @@ private Link getLink(URI uri, String rel) {
 private void addOrder(Link link, EntityModel<Coffee> coffee) {
     // 建立新訂單
     CoffeeOrder newOrder = CoffeeOrder.builder()
-            .customer("Li Lei")
+            .customer("Ray Chu")
             .state(OrderState.INIT)
             .build();
     

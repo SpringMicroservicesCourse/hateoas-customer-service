@@ -5,61 +5,21 @@
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>3.2.5</version>
-		<relativePath/> <!-- lookup parent from repository -->
+		<version>3.4.5</version>
+		<relativePath/>
 	</parent>
 	<groupId>tw.fengqing.spring.springbucks.customer</groupId>
-	<artifactId>customer-service</artifactId>
+	<artifactId>hateoas-customer-service</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>customer-service</name>
+	<name>hateoas-customer-service</name>
 	<description>Demo project for Spring Boot</description>
 
 	<properties>
 		<java.version>21</java.version>
-		<!-- 自定義依賴版本管理 -->
 		<joda-money.version>2.0.2</joda-money.version>
-		<commons-lang3.version>3.17.0</commons-lang3.version>
-		<httpclient5.version>5.3.1</httpclient5.version>
 	</properties>
 
-	<!-- 依賴版本管理區塊 -->
-	<dependencyManagement>
-		<dependencies>
-			<!-- 自定義版本覆蓋 Spring Boot 預設版本 -->
-			<dependency>
-				<groupId>org.joda</groupId>
-				<artifactId>joda-money</artifactId>
-				<version>${joda-money.version}</version>
-			</dependency>
-			
-			<!-- Apache Commons Lang3 版本管理 -->
-			<dependency>
-				<groupId>org.apache.commons</groupId>
-				<artifactId>commons-lang3</artifactId>
-				<version>${commons-lang3.version}</version>
-			</dependency>
-			
-			<!-- HttpClient5 版本統一管理 -->
-			<dependency>
-				<groupId>org.apache.httpcomponents.client5</groupId>
-				<artifactId>httpclient5</artifactId>
-				<version>${httpclient5.version}</version>
-			</dependency>
-			<dependency>
-				<groupId>org.apache.httpcomponents.core5</groupId>
-				<artifactId>httpcore5</artifactId>
-				<version>${httpclient5.version}</version>
-			</dependency>
-			<dependency>
-				<groupId>org.apache.httpcomponents.client5</groupId>
-				<artifactId>httpclient5-fluent</artifactId>
-				<version>${httpclient5.version}</version>
-			</dependency>
-		</dependencies>
-	</dependencyManagement>
-
 	<dependencies>
-		<!-- Spring Boot 預設依賴 - 不指定版本，使用 Spring Boot 管理 -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-web</artifactId>
@@ -69,12 +29,6 @@
 			<artifactId>spring-boot-starter-data-rest</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-hateoas</artifactId>
-		</dependency>
-
-		<!-- 自定義依賴 - 版本由 dependencyManagement 管理 -->
-		<dependency>
 			<groupId>org.joda</groupId>
 			<artifactId>joda-money</artifactId>
 		</dependency>
@@ -83,35 +37,31 @@
 			<groupId>org.apache.commons</groupId>
 			<artifactId>commons-lang3</artifactId>
 		</dependency>
-
-		<!-- HttpClient5 依賴 - 使用新版 API -->
 		<dependency>
 			<groupId>org.apache.httpcomponents.client5</groupId>
 			<artifactId>httpclient5</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>org.apache.httpcomponents.core5</groupId>
-			<artifactId>httpcore5</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>org.apache.httpcomponents.client5</groupId>
-			<artifactId>httpclient5-fluent</artifactId>
-		</dependency>
-
-		<!-- 開發工具依賴 -->
-		<dependency>
 			<groupId>org.projectlombok</groupId>
 			<artifactId>lombok</artifactId>
 			<optional>true</optional>
 		</dependency>
-		
-		<!-- 測試依賴 -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-test</artifactId>
 			<scope>test</scope>
 		</dependency>
 	</dependencies>
+
+	<dependencyManagement>
+	<dependencies>
+		<dependency>
+			<groupId>org.joda</groupId>
+			<artifactId>joda-money</artifactId>
+			<version>${joda-money.version}</version>
+		</dependency>
+	</dependencies>
+</dependencyManagement>
 
 	<build>
 		<plugins>

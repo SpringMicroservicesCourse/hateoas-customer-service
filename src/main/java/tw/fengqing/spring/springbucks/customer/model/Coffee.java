@@ -14,6 +14,8 @@ import java.util.Date;
 @NoArgsConstructor
 @AllArgsConstructor
 public class Coffee implements Serializable {
+    private static final long serialVersionUID = 1L;
+
     private String name;
     private Money price;
     private Date createTime;
